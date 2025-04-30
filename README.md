@@ -11,7 +11,7 @@ from queue import Queue
 music_queue = Queue()
 currently_playing = False
 
-class Bot(commands.Bot):
+class MusicBot(commands.Bot):
     def __init__(self):
         super().__init__(
             token='SEU_TOKEN_OAUTH',
@@ -32,19 +32,20 @@ class Bot(commands.Bot):
         music_queue.put(query)
         await ctx.send(f'🎵 "{query}" adicionada à fila!')
 
+        global currently_playing
         if not currently_playing:
+            currently_playing = True
             asyncio.create_task(play_next(ctx))
 
     @commands.command(name='skip')
     async def skip(self, ctx):
         subprocess.call(['pkill', '-f', 'ffplay'])  # Termina o processo do ffplay
-        await ctx.send('⏭️ Música pulada!')
+        await ctx.send('⏩️ Música pulada!')
 
 async def play_next(ctx):
     global currently_playing
 
     while not music_queue.empty():
-        currently_playing = True
         query = music_queue.get()
         await ctx.send(f'Tocando agora: {query}')
 
@@ -65,6 +66,14 @@ async def play_next(ctx):
 
     currently_playing = False
 
+# Execução segura do bot sem uso de asyncio.run()
+async def main():
+    bot = MusicBot()
+    await bot.start()
+
 if __name__ == '__main__':
-    bot = Bot()
-    bot.run()
+    try:
+        asyncio.get_event_loop().run_until_complete(main())
+    except KeyboardInterrupt:
+        print("Bot finalizado.")
+
