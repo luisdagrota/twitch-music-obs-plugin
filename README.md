@@ -1,5 +1,5 @@
 # twitch-music-obs-plugin
-teste
+
 ## Estrutura inicial do projeto
 
 # main.py
@@ -10,6 +10,7 @@ from queue import Queue
 
 music_queue = Queue()
 currently_playing = False
+queued_songs = set()
 
 class MusicBot(commands.Bot):
     def __init__(self):
@@ -29,7 +30,12 @@ class MusicBot(commands.Bot):
             await ctx.send('Uso: !play <link ou nome da música>')
             return
 
+        if query in queued_songs:
+            await ctx.send(f'⛔ "{query}" já está na fila!')
+            return
+
         music_queue.put(query)
+        queued_songs.add(query)
         await ctx.send(f'🎵 "{query}" adicionada à fila!')
 
         global currently_playing
@@ -42,11 +48,20 @@ class MusicBot(commands.Bot):
         subprocess.call(['pkill', '-f', 'ffplay'])  # Termina o processo do ffplay
         await ctx.send('⏩️ Música pulada!')
 
+    @commands.command(name='fila')
+    async def fila(self, ctx):
+        if music_queue.empty():
+            await ctx.send('A fila está vazia!')
+        else:
+            fila_list = list(queued_songs)
+            await ctx.send('Fila atual: ' + ' | '.join(fila_list))
+
 async def play_next(ctx):
     global currently_playing
 
     while not music_queue.empty():
         query = music_queue.get()
+        queued_songs.discard(query)
         await ctx.send(f'Tocando agora: {query}')
 
         # Baixar áudio com yt-dlp
@@ -76,4 +91,3 @@ if __name__ == '__main__':
         asyncio.get_event_loop().run_until_complete(main())
     except KeyboardInterrupt:
         print("Bot finalizado.")
-
